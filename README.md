@@ -1,5 +1,10 @@
 # 咖啡因 Caffeine for Windows
 
+[![CI](https://github.com/__GH_USER__/caffeine-windows/actions/workflows/ci.yml/badge.svg)](https://github.com/__GH_USER__/caffeine-windows/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows)
+![.NET Framework 4.x](https://img.shields.io/badge/.NET-Framework%204.x-512BD4)
+
 Windows 托盘防休眠小工具。行为照搬 macOS 上的 Caffeine：托盘里一只空咖啡杯，
 **点一下变成满杯冒热气**（系统睡眠 / 休眠 / 息屏全部关掉，保持唤醒），
 **再点一下变回空杯**（把你原来的电源设置原样还回去）。
@@ -11,6 +16,26 @@ Windows 托盘防休眠小工具。行为照搬 macOS 上的 Caffeine：托盘�
 - 不联网、不装服务、不写注册表服务项；所有数据都在 `%LOCALAPPDATA%\Caffeine`
 - 原样还原你的默认设置；**万一读不到，就按「1 小时后睡眠」这个默认值兜底**
 - 就算被强杀/崩溃，下次启动会自动把设置还原，不会把你的机器留在「永不睡眠」状态
+
+## 下载
+
+| 方式 | 说明 |
+| --- | --- |
+| **[安装包（推荐）](https://github.com/__GH_USER__/caffeine-windows/releases/latest)** | 页面上的 `Caffeine-Setup-<版本>.exe`，双击即可。按用户安装，**不需要管理员**；重复运行就是覆盖升级，你的设置和开机自启都会保留 |
+| [免安装版](https://github.com/__GH_USER__/caffeine-windows/releases/latest) | 同一页的 `Caffeine.exe`，丢到任意目录双击运行 |
+| [从源码构建](#自己编译) | 只需要系统自带的 `csc.exe`，不需要装 Visual Studio |
+
+> ⚠️ **安装包没有代码签名**，从浏览器下载时 Windows 可能弹「Windows 已保护你的电脑」。
+> 点 **更多信息 → 仍要运行** 就行。如果你介意这个，可以自己从源码构建。
+
+## 文档
+
+| | |
+| --- | --- |
+| [CHANGELOG.md](CHANGELOG.md) | 版本变更 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 构建方式、编码约定、改图标的说明 |
+| [SECURITY.md](SECURITY.md) | 漏洞上报（这个 app 会改你的电源设置，值得一看） |
+| [LICENSE](LICENSE) | MIT |
 
 ## 用法
 
@@ -35,14 +60,22 @@ Caffeine.exe --restore    手动修复：把上次没还原的设置还原回去
 
 ## 安装
 
-最省事：把 `Caffeine.exe` 丢到任何目录双击运行即可。
+**去 [Releases](https://github.com/__GH_USER__/caffeine-windows/releases/latest) 下载 `Caffeine-Setup-<版本>.exe`，双击即可。**
+按用户安装到 `%LOCALAPPDATA%\Programs\Caffeine`，不需要管理员，会建开始菜单快捷方式；
+重复运行同一个安装包就是覆盖升级，你的设置和开机自启都保留。
 
-要更正式一点，用 `install.bat`：
+命令行参数（一般用不到）：
 
-```bat
-install.bat          :: 复制到 %LOCALAPPDATA%\Programs\Caffeine + 开始菜单快捷方式
-install.bat start    :: 同上，并加入开机启动
 ```
+Caffeine-Setup-1.1.0.exe                  交互式安装 / 覆盖升级
+Caffeine-Setup-1.1.0.exe --silent --no-launch   静默安装，不启动（部署脚本用）
+Caffeine-Setup-1.1.0.exe --dir "D:\Apps\..."     换安装位置
+Caffeine-Setup-1.1.0.exe --uninstall --quiet     静默卸载
+Caffeine-Setup-1.1.0.exe --version              打印内置的版本号
+```
+
+不想装：把 `Caffeine.exe` 丢到任何目录双击运行即可（`install.bat` 也还可以用，
+它就是复制文件 + 建快捷方式）。
 
 开机自启也可以事后在托盘右键菜单里勾选。
 
@@ -234,3 +267,14 @@ powershell -ExecutionPolicy Bypass -File .\tests\shot-uninstall.ps1
 - 「以管理员身份重新启动」会先还原当前设置再拉起高权限实例，UAC 会弹一次。
 - 关闭「系统休眠」会顺带关掉「快速启动」，这是 Windows 本身的行为；
   还原时会一并开回来。
+- 安装包未做代码签名（见 [下载](#下载)）。
+- 本项目只覆盖 Windows 10 / 11 桌面版。没有 ARM64 原生构建，ARM 机器靠 x64 模拟运行。
+
+## 致谢
+
+造型参考的是 macOS 上的 [Caffeine](https://intworks.com/caffeine/)（Intworks）。
+图标、菜单、安装器和全部代码均为本仓库独立实现，未使用其任何资源。
+
+## 许可证
+
+[MIT](LICENSE) © 2026 JohnShaw

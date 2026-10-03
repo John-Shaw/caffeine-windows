@@ -1,0 +1,267 @@
+/* 咖啡因 Caffeine for Windows - landing page
+ *
+ * One dark theme, no JS, no build step.  Colours are lifted from the tray
+ * icon itself so the page and the app look like the same product.
+ */
+
+:root {
+  --bg:        #16110d;
+  --bg-soft:   #1e1813;
+  --panel:     #241d17;
+  --line:      #372d24;
+  --cream:     #fcf8f1;
+  --ceramic:   #f3ebe0;
+  --muted:     #a69685;
+  --brown:     #3a2314;
+  --crema:     #ba7e44;
+  --steam:     #708494;
+  --ok:        #6fbf73;
+
+  --radius: 14px;
+  --maxw: 980px;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+          "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  --mono: "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ceramic);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* the cup's own glow, very faint, at the top of the page */
+body::before {
+  content: "";
+  position: absolute;
+  inset: -220px 0 auto 0;
+  height: 520px;
+  background: radial-gradient(ellipse 620px 320px at 50% 0,
+              rgba(186, 126, 68, .16), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+a { color: var(--crema); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: var(--mono);
+  font-size: .88em;
+  background: #2b231c;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+/* ---------- header ---------- */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+header .logo { width: 30px; height: 30px; display: block; }
+header .name  { font-weight: 600; letter-spacing: .2px; }
+header nav    { margin-left: auto; display: flex; gap: 20px; font-size: 14px; }
+header nav a  { color: var(--muted); }
+header nav a:hover { color: var(--ceramic); text-decoration: none; }
+
+/* ---------- hero ---------- */
+
+.hero { text-align: center; padding: 68px 0 56px; }
+
+.hero .cup {
+  width: 168px;
+  height: 168px;
+  display: block;
+  margin: 0 auto 26px;
+  filter: drop-shadow(0 12px 34px rgba(0, 0, 0, .55));
+}
+
+.hero h1 {
+  margin: 0 0 6px;
+  font-size: clamp(30px, 5.4vw, 46px);
+  letter-spacing: .5px;
+  color: var(--cream);
+}
+
+.hero .sub {
+  margin: 0 0 30px;
+  font-size: clamp(16px, 2.4vw, 20px);
+  color: var(--muted);
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 26px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: transform .12s ease, filter .12s ease;
+}
+.btn:hover { text-decoration: none; transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn-primary {
+  background: linear-gradient(180deg, #c98d4e, #a96f39);
+  color: #23170c;
+  box-shadow: 0 6px 20px rgba(186, 126, 68, .3);
+}
+.btn-primary:hover { filter: brightness(1.07); }
+
+.btn-ghost { border-color: var(--line); color: var(--ceramic); }
+.btn-ghost:hover { border-color: var(--crema); }
+
+.hero .note {
+  margin: 24px auto 0;
+  max-width: 640px;
+  font-size: 13.5px;
+  color: #8a7a6b;
+}
+
+/* ---------- sections ---------- */
+
+section { padding: 54px 0; border-top: 1px solid var(--line); }
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  color: var(--cream);
+  letter-spacing: .3px;
+}
+
+.lede { margin: 0 0 34px; color: var(--muted); }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+.card h3 { margin: 0 0 6px; font-size: 16px; color: var(--cream); }
+.card p  { margin: 0; font-size: 14.5px; color: var(--muted); }
+
+/* ---------- screenshots ---------- */
+
+.shot { margin: 0 0 26px; }
+
+.shot figcaption {
+  margin-top: 10px;
+  font-size: 13.5px;
+  color: #8a7a6b;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #242424;
+}
+
+.shot-pair { display: grid; gap: 26px; }
+@media (min-width: 720px) { .shot-pair { grid-template-columns: 1fr 1fr; } }
+
+.shot-menu img { max-width: 480px; margin: 0 auto; }
+
+/* ---------- how it works ---------- */
+
+.steps { counter-reset: step; display: grid; gap: 14px; }
+
+.step {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 14px;
+  align-items: start;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.step::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2f251c;
+  color: var(--crema);
+  font-weight: 700;
+  font-size: 14px;
+}
+.step b { color: var(--cream); font-weight: 600; }
+.step span { color: var(--muted); font-size: 14.5px; }
+
+/* ---------- faq ---------- */
+
+.faq details {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 20px;
+  margin-bottom: 10px;
+}
+/* summary is a list-item by default, and a flex container cannot have a
+   marker at all - which is the only reliable way to kill the disclosure
+   triangle across Chrome/Edge/Firefox.  margin-left:auto then pins the +/-
+   to the right edge; float:right does not work reliably here.
+
+   NOTE: every rule below is scoped to `.faq`, so <section id="faq"> in
+   index.html MUST carry class="faq".  Dropping that class fails silently -
+   the whole block just stops applying and the page still looks fine. */
+.faq summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 14px 0;
+  font-weight: 600;
+  color: var(--cream);
+}
+.faq summary::marker { content: ""; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "＋"; margin-left: auto; color: var(--muted); }
+.faq details[open] summary::after { content: "－"; }
+.faq details p { margin: 0 0 16px; color: var(--muted); font-size: 14.5px; }
+
+/* ---------- footer ---------- */
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 34px 0 46px;
+  color: #8a7a6b;
+  font-size: 13.5px;
+}
+footer .links { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 14px; }
+footer .links a { color: var(--muted); }
+footer .links a:hover { color: var(--ceramic); }
+footer p { margin: 0 0 6px; }

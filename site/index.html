@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>咖啡因 Caffeine for Windows — 托盘防休眠小工具</title>
+<meta name="description" content="Windows 托盘防休眠小工具。点一下变成满杯冒热气，系统睡眠 / 休眠 / 息屏全部关掉；再点一下原样还回去。不需要管理员，完全离线，MIT 开源。">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta property="og:title" content="咖啡因 Caffeine for Windows">
+<meta property="og:description" content="点一下，系统就不睡了。再点一下，原样还回去。">
+<meta property="og:image" content="assets/hero.png">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="display:flex;align-items:center;gap:10px;width:100%">
+    <img class="logo" src="assets/favicon.png" alt="">
+    <span class="name">咖啡因 Caffeine</span>
+    <nav>
+      <a href="#screenshots">长什么样</a>
+      <a href="#how">怎么用</a>
+      <a href="#faq">常见问题</a>
+      <a href="https://github.com/__GH_USER__/caffeine-windows">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <img class="cup" src="assets/hero.png" alt="满杯冒热气的咖啡杯">
+    <h1>咖啡因 Caffeine for Windows</h1>
+    <p class="sub">点一下，系统就不睡了。再点一下，原样还回去。</p>
+
+    <div class="buttons">
+      <a class="btn btn-primary" href="https://github.com/__GH_USER__/caffeine-windows/releases/latest">
+        下载安装包
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/__GH_USER__/caffeine-windows">
+        看源码
+      </a>
+    </div>
+
+    <p class="note">
+      单文件、<strong>不需要装任何运行时</strong>、不联网、不装服务、不需要管理员。<br>
+      安装包未做代码签名，从浏览器下载时若弹出「Windows 已保护你的电脑」，点<strong>更多信息 → 仍要运行</strong>即可。
+    </p>
+  </div>
+
+  <section id="screenshots">
+    <h2>长什么样</h2>
+    <p class="lede">就在托盘里，跟其它图标待在一起。</p>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="assets/tray-idle.png" alt="托盘里的空咖啡杯图标">
+        <figcaption>没激活时是一只<strong>空杯</strong>，正常跟随系统设置。</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="assets/tray-awake.png" alt="托盘里冒热气的咖啡杯图标">
+        <figcaption>点一下变成<strong>满杯冒热气</strong>——这时系统不休眠。</figcaption>
+      </figure>
+    </div>
+
+    <figure class="shot shot-menu">
+      <img src="assets/menu.png" alt="托盘右键菜单">
+      <figcaption>右键是菜单。勾选项左边有绿色对勾并且文字加粗，一眼就能看出开没开。</figcaption>
+    </figure>
+  </section>
+
+  <section id="how">
+    <h2>怎么用</h2>
+    <p class="lede">就这样，没有别的。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div><b>左键点一下托盘图标</b><br>
+          <span>进入「保持唤醒」：系统的睡眠、休眠、屏幕熄灭全部关掉。</span></div>
+      </div>
+      <div class="step">
+        <div><b>再点一下</b><br>
+          <span>回到空杯，你原来的电源设置被<strong>原样还回去</strong>。</span></div>
+      </div>
+      <div class="step">
+        <div><b>想让它自己退出？</b><br>
+          <span>退出、关机、注销时都会先还原设置，绝不把你的机器留在「永不睡眠」状态。</span></div>
+      </div>
+      <div class="step">
+        <div><b>被强杀了怎么办？</b><br>
+          <span>下次启动会自动检测并补救。万一读不到原设置，就按「1 小时后睡眠」这个保守默认值兜底。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>几个不一样的地方</h2>
+    <p class="lede">小工具，但该认真的地方没偷懒。</p>
+
+    <div class="cards">
+      <div class="card">
+        <h3>真的能还原</h3>
+        <p>先把电源方案完整读一遍存下来，还的时候按 GUID 精确写回每个值，不是靠猜。</p>
+      </div>
+      <div class="card">
+        <h3>崩溃不背锅</h3>
+        <p>被强杀或崩溃后，下次启动会自动把设置还原。留了 <code>--restore</code> 命令行以防万一。</p>
+      </div>
+      <div class="card">
+        <h3>不要管理员也够用</h3>
+        <p>只有「关闭系统休眠」这一步需要管理员权限，缺了也不影响保活效果。真需要时菜单里有「以管理员身份重新启动」。</p>
+      </div>
+      <div class="card">
+        <h3>高 DPI 下不糊</h3>
+        <p>菜单和安装器都声明了 per-monitor v2 DPI 感知，4K 200% 缩放下文字是原生渲染的。</p>
+      </div>
+      <div class="card">
+        <h3>屏幕可以正常熄</h3>
+        <p>菜单里勾「允许显示器自动熄屏」，保活期间屏幕照常熄灭，只是不让系统休眠。</p>
+      </div>
+      <div class="card">
+        <h3>编译门槛几乎为零</h3>
+        <p>只用系统自带的 <code>csc.exe</code>，不需要 Visual Studio 或 .NET SDK。仓库里有 63 项单元测试和三条真实交互测试。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq">
+    <h2>常见问题</h2>
+    <p class="lede">都是被问得比较多的。</p>
+
+    <details>
+      <summary>它到底改了哪些设置？</summary>
+      <p>电源方案里的「睡眠时间」「休眠时间」「关闭硬盘时间」「关闭显示器时间」这四项。
+         激活时把它们设为「从不」，退出时按之前存下来的值精确写回。
+         另外如果系统开着休眠且当前不是管理员，会尝试关掉它来保证「真的不休眠」——这一步失败也不影响保活效果。</p>
+    </details>
+
+    <details>
+      <summary>需要管理员权限吗？</summary>
+      <p>不需要。普通权限就能完成保活。只有「关闭系统休眠」需要，失败会在日志里说明并且照常工作。
+         需要完整权限时，菜单里有「以管理员身份重新启动」。</p>
+    </details>
+
+    <details>
+      <summary>会联网吗？</summary>
+      <p>完全不会。没有网络代码，不装服务，不写任何服务项。所有数据都在
+         <code>%LOCALAPPDATA%\Caffeine</code>，卸载时可以选择保留。</p>
+    </details>
+
+    <details>
+      <summary>我只想让屏幕别灭，但想让系统正常睡</summary>
+      <p>菜单里勾上「允许显示器自动熄屏」，保活期间屏幕会照常熄灭，只有系统本身不休眠。</p>
+    </details>
+
+    <details>
+      <summary>怎么让它开机自动出现？</summary>
+      <p>托盘右键菜单里勾「开机自动启动」。也可以用安装器的 <code>--autostart</code> 参数。</p>
+    </details>
+
+    <details>
+      <summary>Windows 11 找不到图标？</summary>
+      <p>Win11 默认只显示「固定」的图标，新程序会躲在托盘右侧的 <code>^</code>（显示隐藏的图标）里。
+         点开找到咖啡杯，拖到外面就固定了。</p>
+    </details>
+
+    <details>
+      <summary>怎么彻底卸载？</summary>
+      <p>运行 <code>Caffeine-Setup-&lt;版本&gt;.exe --uninstall</code>，或用开始菜单里的卸载项。
+         加 <code>--delete-data</code> 会连 <code>%LOCALAPPDATA%\Caffeine</code> 一起删掉。
+         卸载前若正处于保活状态，会先还原设置。</p>
+    </details>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/__GH_USER__/caffeine-windows">GitHub 源码</a>
+      <a href="https://github.com/__GH_USER__/caffeine-windows/releases/latest">下载</a>
+      <a href="https://github.com/__GH_USER__/caffeine-windows/blob/main/CHANGELOG.md">变更日志</a>
+      <a href="https://github.com/__GH_USER__/caffeine-windows/blob/main/CONTRIBUTING.md">参与开发</a>
+      <a href="https://github.com/__GH_USER__/caffeine-windows/blob/main/LICENSE">MIT 许可证</a>
+    </div>
+    <p>造型参考 macOS 上的 Caffeine（Intworks），图标与代码均为独立实现。</p>
+    <p>MIT License © 2026 JohnShaw</p>
+  </div>
+</footer>
+
+</body>
+</html>

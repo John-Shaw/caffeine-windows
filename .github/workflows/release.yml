@@ -1,0 +1,97 @@
+# 打 tag 即发布：v1.1.0 -> 构建安装器 -> GitHub Release
+#
+# 用 GitHub 自带的 gh CLI 而不是第三方 action，避免为发布流程引入外部依赖。
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag，例如 v1.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+# 同一个 tag 不并发跑两次发布
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Check that version.txt matches the tag
+        shell: powershell
+        run: |
+          $tag = '${{ github.event.inputs.tag || github.ref_name }}' -replace '^v', ''
+          $ver = (Get-Content .\version.txt -First 1).Trim()
+          if ($tag -ne $ver) { throw "tag is v$tag but version.txt says $ver" }
+          Write-Host ("releasing " + $ver)
+
+      - name: Unit tests (63)
+        shell: powershell
+        run: .\tests\run-tests.ps1
+
+      - name: Build the app and the installer
+        shell: powershell
+        run: .\build-setup.ps1
+
+      - name: Checksum
+        shell: powershell
+        run: |
+          $files = @(Get-ChildItem .\dist\Caffeine-Setup-*.exe)
+          $files += (Get-ChildItem .\dist\Caffeine.exe)
+          $lines = @()
+          foreach ($f in $files) {
+            $h = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
+            $lines += ($h + '  ' + $f.Name)
+          }
+          $lines | Out-File -FilePath .\dist\SHA256SUMS.txt -Encoding ascii
+          Get-Content .\dist\SHA256SUMS.txt
+
+      - name: Create the GitHub Release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $setup = (Get-ChildItem .\dist\Caffeine-Setup-*.exe | Select-Object -First 1)
+          $bare  = (Get-ChildItem .\dist\Caffeine.exe | Select-Object -First 1)
+          $notes = @(
+            '安装（推荐）：下载 Caffeine-Setup-<版本>.exe，双击即可，按用户安装、不需要管理员。',
+            '',
+            '免安装：下载 Caffeine.exe 丢到任意目录双击运行。',
+            '',
+            '校验：SHA256SUMS.txt 里有上面两个文件的校验和。',
+            '',
+            '变更内容见仓库里的 CHANGELOG.md。'
+          ) -join [Environment]::NewLine
+          $notesFile = Join-Path $env:RUNNER_TEMP 'notes.md'
+          Set-Content -Path $notesFile -Value $notes -Encoding UTF8
+
+          $ghArgs = @(
+            'release', 'create', $env:TAG,
+            '--verify-tag',
+            '--title', ('Caffeine ' + $env:TAG),
+            '--notes-file', $notesFile,
+            $setup.FullName,
+            $bare.FullName,
+            '.\dist\SHA256SUMS.txt'
+          )
+          gh @ghArgs
+
+      - name: Show the release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: gh release view $env:TAG --json url,tagName,assets

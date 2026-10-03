@@ -1,0 +1,83 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the toolchain
+        shell: powershell
+        run: |
+          $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          if (-not (Test-Path $csc)) { throw "csc.exe not found: $csc" }
+          Write-Host ("csc      : " + $csc)
+          Write-Host ("powershell: " + $PSVersionTable.PSVersion)
+          Write-Host ("version  : " + (Get-Content .\version.txt -First 1).Trim())
+
+      - name: Build Caffeine.exe
+        shell: powershell
+        run: .\build.ps1
+
+      - name: Unit tests (63)
+        shell: powershell
+        run: .\tests\run-tests.ps1
+
+      - name: Build the installer
+        shell: powershell
+        run: .\build-setup.ps1
+
+      - name: Prove the installer is actually silent-installable
+        shell: powershell
+        run: |
+          # This is the exact thing the Microsoft Store requires of an EXE
+          # submission, so it is worth testing for real rather than trusting the
+          # build log.  The runner is a disposable VM, so installing onto it is
+          # safe - and it doubles as a check that --silent is a real switch and
+          # that the embedded payload unpacks.
+          $setup = (Get-ChildItem .\dist\Caffeine-Setup-*.exe | Select-Object -First 1)
+          if (-not $setup) { throw 'installer was not produced' }
+          Write-Host ("installer: " + $setup.Name + "  " + $setup.Length + " bytes")
+
+          & $setup.FullName '--silent' '--no-launch'
+          if ($LASTEXITCODE -ne 0) { throw "silent install exited $LASTEXITCODE" }
+
+          $dir = Join-Path $env:LOCALAPPDATA 'Programs\Caffeine'
+          $exe = Join-Path $dir 'Caffeine.exe'
+          if (-not (Test-Path $exe)) { throw "silent install did not write $exe" }
+          Write-Host ("installed: " + $exe + "  " + (Get-Item $exe).Length + " bytes")
+
+          $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Caffeine'
+          if (-not (Test-Path $key)) { throw 'uninstall key was not registered' }
+          Write-Host ("DisplayVersion: " + (Get-ItemProperty $key).DisplayVersion)
+
+          # Uninstall via the installed uninstall.exe, which is what the Start
+          # Menu entry points at and what tests\verify-install.ps1 covers.
+          # (The setup binary can also self-uninstall, but that hands itself off
+          # to a temp copy and is a different path - not the one to gate CI on.)
+          $un = Join-Path $dir 'uninstall.exe'
+          if (-not (Test-Path $un)) { throw "silent install did not write $un" }
+          $p = Start-Process -FilePath $un -ArgumentList '--uninstall', '--quiet' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "uninstall exited $($p.ExitCode)" }
+          if (Test-Path $key) { throw 'uninstall key survived --uninstall --quiet' }
+          Write-Host 'silent install + uninstall OK'
+
+      - name: Keep the installer as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Caffeine-Setup
+          path: |
+            dist/Caffeine-Setup-*.exe
+            dist/Caffeine.exe
+          if-no-files-found: error
+          retention-days: 14
