@@ -1,0 +1,28 @@
+# ---- build output: regenerate with build.ps1 / build-setup.ps1 ----------
+/bin/
+/obj/
+/dist/
+
+# ---- scratch output from tools\probe_tray.py ---------------------------
+# (the zoomed debug crops it writes next to the images it measures)
+/assets/_probe_*.png
+
+# ---- NOTE: assets\caffeine_empty.ico and assets\caffeine_full.ico are
+# ---- NOT ignored on purpose.  build.ps1 feeds them to csc directly as
+# ---- /win32icon and /resource, so a fresh clone can build the app without
+# ---- Python or Pillow installed.  tools\make_icons.py regenerates them.
+
+# ---- Windows / editors -------------------------------------------------
+Thumbs.db
+desktop.ini
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+.vscode/
+
+# ---- Python tooling (icon + preview generators) -----------------------
+__pycache__/
+*.py[cod]

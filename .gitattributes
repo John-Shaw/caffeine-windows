@@ -1,0 +1,30 @@
+# Keep line endings identical no matter which OS clones the repo.
+#
+# Two encoding constraints in this build must not be broken by git:
+#
+#   * *.ps1 is read by Windows PowerShell 5.1 as ANSI unless it carries a BOM,
+#     so the build scripts must stay ASCII-only.
+#   * *.cs is UTF-8 *without* BOM and is compiled with /codepage:65001.
+#     Any stray BOM or a lossy transcode mangles every Chinese string literal.
+#
+# git never adds or strips a BOM, so plain `text` is all that is needed here.
+# Do not add working-tree-encoding to these rules.
+
+*.ps1      text eol=lf
+*.cs       text eol=lf
+*.py       text eol=lf
+*.md       text eol=lf
+*.txt      text eol=lf
+*.xml      text eol=lf
+*.manifest text eol=lf
+*.yml      text eol=lf
+
+# .bat is the one exception: cmd.exe is happiest with CRLF
+*.bat      text eol=crlf
+
+# binaries - never touch
+*.ico      binary
+*.png      binary
+*.jpg      binary
+*.exe      binary
+*.zip      binary
