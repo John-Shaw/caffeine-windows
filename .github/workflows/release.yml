@@ -1,4 +1,5 @@
-# 打 tag 即发布：v1.1.0 -> 构建安装器 -> GitHub Release
+# 打 tag 即发布：v1.2.0 -> 构建安装器 -> GitHub Release
+# version.txt 必须是 tag 去掉 v 之后的那一串，不一致会直接失败。
 #
 # 用 GitHub 自带的 gh CLI 而不是第三方 action，避免为发布流程引入外部依赖。
 name: release
@@ -37,7 +38,7 @@ jobs:
           if ($tag -ne $ver) { throw "tag is v$tag but version.txt says $ver" }
           Write-Host ("releasing " + $ver)
 
-      - name: Unit tests (63)
+      - name: Unit tests (88)
         shell: powershell
         run: .\tests\run-tests.ps1
 

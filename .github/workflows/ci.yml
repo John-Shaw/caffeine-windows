@@ -58,7 +58,7 @@ jobs:
         shell: powershell
         run: .\build.ps1
 
-      - name: Unit tests (63)
+      - name: Unit tests (88)
         shell: powershell
         run: .\tests\run-tests.ps1
 

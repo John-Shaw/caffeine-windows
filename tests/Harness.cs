@@ -36,6 +36,30 @@ namespace Caffeine
             Console.WriteLine("管理员权限      : " + PowerKeeper.IsAdmin());
             Console.WriteLine("待恢复文件      : " + (File.Exists(AppPaths.PendingRestoreFile) ? "存在" : "无"));
 
+            // settings.cfg is real user state as well.  The tests flip
+            // allow_display_sleep and auto_awake, and auto_awake silently
+            // decides whether a server comes back up awake after a reboot --
+            // clobbering it would be a real, invisible loss.  Keep the bytes.
+            bool hadSettings = File.Exists(AppPaths.SettingsFile);
+            byte[] settingsBackup = hadSettings ? File.ReadAllBytes(AppPaths.SettingsFile) : null;
+            bool backupAutoAwake = hadSettings && UserSettings.Load().AutoAwake;
+            Console.WriteLine("进入测试前的 settings.cfg: " + (hadSettings ? "已备份" : "不存在"));
+
+            // A user who turned on "start already awake" (a render box, a small
+            // server) would get every TrayContext below coming up in keep-awake
+            // mode by itself, which inverts what Toggle() is supposed to do here:
+            // the first Toggle would deactivate instead of activate.  The harness
+            // drives the state machine itself, so force the preference off for
+            // the duration.  Section 7 sets it back on deliberately, and the
+            // finally block puts the user's own bytes back.
+            UserSettings neutral = UserSettings.Load();
+            if (neutral.AutoAwake)
+            {
+                Console.WriteLine("进入测试前 auto_awake=true，测试期间强制置 false（结束后还原）");
+                neutral.AutoAwake = false;
+                neutral.Save();
+            }
+
             PowerSnapshot before = PowerKeeper.Capture();
             Console.WriteLine("操作前的默认设置: " + before.Summary());
             if (!before.ReadOk)
@@ -120,11 +144,54 @@ namespace Caffeine
                 Restore(before);
 
                 Title("6. 设置文件往返");
+                Check("harness 已把 auto_awake 中性化为 false（否则本文件里的每个 TrayContext 都会自己进入保活）",
+                      !UserSettings.Load().AutoAwake);
                 s.AllowDisplaySleep = true; s.Save();
                 bool roundTrip = UserSettings.Load().AllowDisplaySleep;
                 Console.WriteLine("AllowDisplaySleep 写入 true 后读回 = " + roundTrip);
                 Check("设置往返", roundTrip);
                 s.AllowDisplaySleep = false; s.Save();
+
+                Title("7. 启动后自动保持唤醒");
+                // The case this exists for: a machine that serves something to
+                // the network (a render box, a small server) is asleep right
+                // after a reboot because nobody is there to click the icon.
+                UserSettings aw = UserSettings.Load();
+                aw.AutoAwake = true;
+                aw.Save();
+                Check("auto_awake 写入 true 后读回", UserSettings.Load().AutoAwake);
+
+                TrayContext ctx3 = new TrayContext();  // nobody clicks anything
+                AssertState("自动保活：构造后即已开启", 0u, true);
+                AssertSetting("自动保活 STANDBYIDLE", SubSleep, StandbyIdle, 0u);
+                AssertSetting("自动保活 HIBERNATEIDLE", SubSleep, HibernateIdle, 0u);
+                AssertSetting("自动保活 DISKIDLE", SubDisk, DiskIdle, 0u);
+                AssertFile("自动保活：待恢复文件已写入", true);
+
+                // It must have snapshotted the *current* defaults, not the
+                // "never" values it just wrote -- otherwise nothing could ever
+                // be restored.
+                PowerSnapshot autoSnap = PowerKeeper.LoadPending();
+                Check("自动保活：快照有效", autoSnap != null && autoSnap.ReadOk);
+                Check("自动保活：快照等于进入前的设置",
+                      autoSnap != null && autoSnap.ReadOk &&
+                      autoSnap.StandbyAc == before.StandbyAc &&
+                      autoSnap.StandbyDc == before.StandbyDc &&
+                      autoSnap.VideoAc == before.VideoAc &&
+                      autoSnap.DiskAc == before.DiskAc);
+
+                // Turning it off from the tray still wins, and must not
+                // silently clear the preference itself.
+                ctx3.Toggle();
+                AssertSame("自动保活：手动关闭后", before);
+                AssertFile("自动保活：手动关闭后待恢复文件", false);
+                Check("手动关闭保活不会关掉 auto_awake 偏好", UserSettings.Load().AutoAwake);
+                ctx3.ExitThread();
+                ((IDisposable)ctx3).Dispose();
+
+                aw.AutoAwake = false;
+                aw.Save();
+                Check("auto_awake 关闭后读回 false", !UserSettings.Load().AutoAwake);
 
                 ctx.ExitThread();
                 ((IDisposable)ctx).Dispose();
@@ -136,6 +203,21 @@ namespace Caffeine
                 PowerKeeper.DeletePending();
                 AssertSame("清理后", before);
                 Check("清理后没有残留待恢复文件", !File.Exists(AppPaths.PendingRestoreFile));
+                RestoreSettings(settingsBackup, hadSettings);
+                // The byte-for-byte restore is the whole point: a user running
+                // this as a server must not silently lose auto_awake=1 because
+                // the tests happened to overwrite settings.cfg.
+                Check("settings.cfg 已还原成进入测试前的内容",
+                      !hadSettings || File.Exists(AppPaths.SettingsFile));
+                if (hadSettings)
+                {
+                    byte[] now = File.ReadAllBytes(AppPaths.SettingsFile);
+                    bool same = now.Length == settingsBackup.Length;
+                    for (int i = 0; same && i < now.Length; i++) same = now[i] == settingsBackup[i];
+                    Check("settings.cfg 逐字节一致", same);
+                    Check("还原后 auto_awake 恢复为 " + UserSettings.Load().AutoAwake,
+                          UserSettings.Load().AutoAwake == backupAutoAwake);
+                }
             }
 
             Title("结果");
@@ -151,6 +233,27 @@ namespace Caffeine
             if (s.ReadOk) PowerKeeper.RestoreForced(s);
             PowerKeeper.DeletePending();
             Console.WriteLine("  [cleanup] 已强制还原: " + s.Summary());
+        }
+
+        private static void RestoreSettings(byte[] backup, bool hadFile)
+        {
+            try
+            {
+                if (hadFile && backup != null)
+                {
+                    File.WriteAllBytes(AppPaths.SettingsFile, backup);
+                    Console.WriteLine("  [cleanup] settings.cfg 已还原为进入测试前的内容");
+                }
+                else if (File.Exists(AppPaths.SettingsFile))
+                {
+                    File.Delete(AppPaths.SettingsFile);
+                    Console.WriteLine("  [cleanup] settings.cfg 已删除（测试前本不存在）");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("  [cleanup] 还原 settings.cfg 失败: " + ex.Message);
+            }
         }
 
         private static void Title(string t)

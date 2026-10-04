@@ -15,6 +15,7 @@ namespace Caffeine
     {
         internal bool AllowDisplaySleep = false;   // keep the screen on while awake
         internal bool AutoStart = false;           // launch with Windows
+        internal bool AutoAwake = false;           // enter keep-awake as soon as we launch
         internal bool WelcomeShown = false;        // one-time "you got it" balloon
         internal bool HibernateHintShown = false;  // one-time "needs admin for hibernation" hint
 
@@ -38,6 +39,7 @@ namespace Caffeine
                     string v;
                     if (kv.TryGetValue("allow_display_sleep", out v)) s.AllowDisplaySleep = v == "1";
                     if (kv.TryGetValue("auto_start", out v)) s.AutoStart = v == "1";
+                    if (kv.TryGetValue("auto_awake", out v)) s.AutoAwake = v == "1";
                     if (kv.TryGetValue("welcome_shown", out v)) s.WelcomeShown = v == "1";
                     if (kv.TryGetValue("hibernate_hint_shown", out v)) s.HibernateHintShown = v == "1";
                 }
@@ -56,6 +58,7 @@ namespace Caffeine
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("allow_display_sleep=" + (AllowDisplaySleep ? "1" : "0"));
                 sb.AppendLine("auto_start=" + (AutoStart ? "1" : "0"));
+                sb.AppendLine("auto_awake=" + (AutoAwake ? "1" : "0"));
                 sb.AppendLine("welcome_shown=" + (WelcomeShown ? "1" : "0"));
                 sb.AppendLine("hibernate_hint_shown=" + (HibernateHintShown ? "1" : "0"));
                 File.WriteAllText(AppPaths.SettingsFile, sb.ToString(), Encoding.UTF8);

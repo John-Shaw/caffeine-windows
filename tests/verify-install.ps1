@@ -1,6 +1,8 @@
 # End-to-end installer test: fresh install -> same-version reinstall -> upgrade
-# to a fake 1.2.0 -> uninstall, checking files, shortcuts, registry, the
-# autostart entry and that user settings survive the upgrade.
+# to a synthetic next version -> uninstall, checking files, shortcuts, registry,
+# the autostart entry and that user settings survive the upgrade.
+# The versions come from version.txt, with the upgrade target derived from it,
+# so this test never needs editing when the project moves to a new release.
 # Runs the silent switches for the mechanical parts and one real GUI click
 # through, and leaves a screenshot of the installer window.
 # ASCII-only.
@@ -9,7 +11,15 @@ Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
 
 $root    = Split-Path -Parent $PSScriptRoot
 $testDir = Join-Path $env:TEMP 'CaffeineInstallTest'
-$setup11 = Join-Path $root 'dist\Caffeine-Setup-1.1.0.exe'
+
+# The real version under test, and a synthetic newer one to upgrade to.
+$verFile   = Join-Path $root 'version.txt'
+$baseVer   = (Get-Content $verFile -First 1).Trim()
+$vparts    = $baseVer.Split('.')
+$upVer     = ('{0}.{1}.{2}' -f [int]$vparts[0], ([int]$vparts[1] + 1), $vparts[2])
+$setupBase = Join-Path $root ('dist\Caffeine-Setup-{0}.exe' -f $baseVer)
+$setupUp   = Join-Path $root ('dist\Caffeine-Setup-{0}.exe' -f $upVer)
+
 $uninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Caffeine'
 $runKey    = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $dataDir   = Join-Path $env:LOCALAPPDATA 'Caffeine'
@@ -114,13 +124,13 @@ Check 'no leftover uninstall key' (-not (Test-Path $uninstKey))
 
 Write-Host ""
 Write-Host "=== 1. fresh install (silent, temp dir) ==="
-$rc = Run-Setup $setup11 @('--silent', '--dir', $testDir, '--no-autostart')
+$rc = Run-Setup $setupBase @('--silent', '--dir', $testDir, '--no-autostart')
 Check 'exit code 0' ($rc -eq 0) "got $rc"
 Check 'Caffeine.exe written' (Test-Path (Join-Path $testDir 'Caffeine.exe'))
 Check 'uninstall.exe written' (Test-Path (Join-Path $testDir 'uninstall.exe'))
 Check 'Start Menu shortcut' (Test-Path $smLink)
 Check 'uninstall key created' (Test-Path $uninstKey)
-Check 'DisplayVersion = 1.1.0' ((RegVal $uninstKey 'DisplayVersion') -eq '1.1.0') (RegVal $uninstKey 'DisplayVersion')
+Check ('DisplayVersion = ' + $baseVer) ((RegVal $uninstKey 'DisplayVersion') -eq $baseVer) (RegVal $uninstKey 'DisplayVersion')
 Check 'InstallLocation recorded' ((RegVal $uninstKey 'InstallLocation') -eq $testDir)
 Check 'UninstallString present' ((RegVal $uninstKey 'UninstallString') -like '*uninstall.exe*--uninstall*')
 Check 'no autostart entry' (-not (Get-ItemProperty $runKey -Name Caffeine -ErrorAction SilentlyContinue))
@@ -128,42 +138,44 @@ $payload = Get-Item (Join-Path $testDir 'Caffeine.exe')
 $built = Get-Item (Join-Path $root 'bin\Caffeine.exe')
 Check 'installed exe identical to build output' ($payload.Length -eq $built.Length) "$($payload.Length) vs $($built.Length)"
 $ver = Get-Ver (Join-Path $testDir 'Caffeine.exe')
-Check 'installed exe reports its version' ($ver -eq '1.1.0') "got $ver"
+Check 'installed exe reports its version' ($ver -eq $baseVer) "got $ver"
 
 Write-Host ""
 Write-Host "=== 2. set a user setting that must survive the upgrade ==="
+# auto_awake=1 is included on purpose: it is the key that decides whether the
+# machine comes back up awake, so losing it across an upgrade would be a real
+# (and silent) regression, not a cosmetic one.
 Set-Content -Path (Join-Path $dataDir 'settings.cfg') -Encoding UTF8 -Value @(
-    'allow_display_sleep=1', 'auto_start=0', 'welcome_shown=1', 'hibernate_hint_shown=1')
-Write-Host "  settings.cfg now: allow_display_sleep=1"
-$rc = Run-Setup $setup11 @('--silent', '--dir', $testDir, '--autostart')
+    'allow_display_sleep=1', 'auto_start=0', 'auto_awake=1', 'welcome_shown=1', 'hibernate_hint_shown=1')
+Write-Host "  settings.cfg now: allow_display_sleep=1 auto_awake=1"
+$rc = Run-Setup $setupBase @('--silent', '--dir', $testDir, '--autostart')
 Check 'reinstall/upgrade exit code 0' ($rc -eq 0) "got $rc"
 Check 'autostart entry created' (((Get-ItemProperty $runKey -Name Caffeine -ErrorAction SilentlyContinue).Caffeine) -like '*CaffeineInstallTest*')
 $cfg = Get-Content (Join-Path $dataDir 'settings.cfg') -Raw
 Check 'user settings survived the reinstall' ($cfg -match 'allow_display_sleep=1')
-Check 'DisplayVersion still 1.1.0' ((RegVal $uninstKey 'DisplayVersion') -eq '1.1.0')
+Check 'auto_awake survived the reinstall' ($cfg -match 'auto_awake=1')
+Check ('DisplayVersion still ' + $baseVer) ((RegVal $uninstKey 'DisplayVersion') -eq $baseVer)
 
 Write-Host ""
-Write-Host "=== 3. upgrade: build a real 1.2.0 and install it over 1.1.0 ==="
-$verFile = Join-Path $root 'version.txt'
-$origVer = (Get-Content $verFile -First 1).Trim()
-Set-Content -Path $verFile -Value '1.2.0' -Encoding ASCII -NoNewline
+Write-Host ("=== 3. upgrade: build a real {0} and install it over {1} ===" -f $upVer, $baseVer)
+Set-Content -Path $verFile -Value $upVer -Encoding ASCII -NoNewline
 & (Join-Path $root 'build-setup.ps1') 2>&1 | Select-String -Pattern 'OK: D' | Out-Null
-$setup12 = Join-Path $root 'dist\Caffeine-Setup-1.2.0.exe'
-Check '1.2.0 setup built' (Test-Path $setup12)
-$rc = Run-Setup $setup12 @('--silent', '--dir', $testDir, '--autostart')
+Check ("$upVer setup built") (Test-Path $setupUp)
+$rc = Run-Setup $setupUp @('--silent', '--dir', $testDir, '--autostart')
 Check 'upgrade exit code 0' ($rc -eq 0) "got $rc"
-Check 'DisplayVersion now 1.2.0' ((RegVal $uninstKey 'DisplayVersion') -eq '1.2.0') (RegVal $uninstKey 'DisplayVersion')
+Check ("DisplayVersion now $upVer") ((RegVal $uninstKey 'DisplayVersion') -eq $upVer) (RegVal $uninstKey 'DisplayVersion')
 $ver2 = Get-Ver (Join-Path $testDir 'Caffeine.exe')
-Check 'installed exe reports 1.2.0' ($ver2 -eq '1.2.0') "got $ver2"
+Check ("installed exe reports $upVer") ($ver2 -eq $upVer) "got $ver2"
 $cfg = Get-Content (Join-Path $dataDir 'settings.cfg') -Raw
 Check 'user settings survived the upgrade' ($cfg -match 'allow_display_sleep=1')
+Check 'auto_awake survived the upgrade' ($cfg -match 'auto_awake=1')
 Check 'autostart entry now points at the new exe' (((Get-ItemProperty $runKey -Name Caffeine -ErrorAction SilentlyContinue).Caffeine) -like '*CaffeineInstallTest*')
 $log = Join-Path $dataDir 'setup.log'
-Check 'setup.log recorded the upgrade' ((Get-Content $log -Raw) -match '1\.2\.0')
+Check 'setup.log recorded the upgrade' ((Get-Content $log -Raw) -match ([regex]::Escape($upVer)))
 
 Write-Host ""
 Write-Host "=== 4. the real GUI: launch the setup and click through it ==="
-$gui = Start-Process -FilePath $setup12 -ArgumentList @('--dir', $testDir, '--no-autostart', '--no-launch') -PassThru
+$gui = Start-Process -FilePath $setupUp -ArgumentList @('--dir', $testDir, '--no-autostart', '--no-launch') -PassThru
 Start-Sleep -Seconds 3
 Shot (Join-Path $root 'assets\setup_step1.png')
 Check 'installer window appeared' ((ClickByPrefix $install))
@@ -171,6 +183,7 @@ Start-Sleep -Seconds 4
 Shot (Join-Path $root 'assets\setup_step3.png')
 $cfg = Get-Content (Join-Path $dataDir 'settings.cfg') -Raw
 Check 'GUI install finished, settings still there' ($cfg -match 'allow_display_sleep=1')
+Check 'auto_awake still there after the GUI install' ($cfg -match 'auto_awake=1')
 $clickedDone = ClickByPrefix $done
 Start-Sleep -Seconds 2
 if (-not $gui.HasExited) { try { $gui.CloseMainWindow() | Out-Null } catch [Exception] { } }
@@ -192,13 +205,13 @@ Check 'Start Menu shortcut removed' (-not (Test-Path $smLink))
 Check 'user data kept (--delete-data not given)' (Test-Path (Join-Path $dataDir 'settings.cfg'))
 
 Write-Host ""
-Write-Host "=== 6. restore the project to 1.1.0 ==="
-Set-Content -Path $verFile -Value $origVer -Encoding ASCII -NoNewline
+Write-Host ("=== 6. restore the project to {0} ===" -f $baseVer)
+Set-Content -Path $verFile -Value $baseVer -Encoding ASCII -NoNewline
 & (Join-Path $root 'build-setup.ps1') 2>&1 | Select-String -Pattern 'OK: D' | Out-Null
-Check '1.1.0 setup rebuilt' (Test-Path $setup11)
-$stale = Join-Path $root 'dist\Caffeine-Setup-1.2.0.exe'
+Check ("$baseVer setup rebuilt") (Test-Path $setupBase)
+$stale = $setupUp
 if (Test-Path $stale) { cmd /c "del /q `"$stale`"" | Out-Null }
-Check 'stale 1.2.0 setup removed' (-not (Test-Path $stale))
+Check ("stale $upVer setup removed") (-not (Test-Path $stale))
 
 Write-Host ""
 Write-Host ("RESULT: {0} failure(s)" -f $script:fail)

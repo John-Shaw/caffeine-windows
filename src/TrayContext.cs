@@ -22,6 +22,7 @@ namespace Caffeine
         private ToolStripMenuItem restoreItem;
         private ToolStripMenuItem displayItem;
         private ToolStripMenuItem autoStartItem;
+        private ToolStripMenuItem autoAwakeItem;
         private ToolStripMenuItem adminItem;
 
         private bool keepAwake;
@@ -63,6 +64,13 @@ namespace Caffeine
                 OnAutoStartChanged();
             };
             autoStartItem.Checked = UserSettings.IsAutoStartOn();
+            autoAwakeItem = new ToolStripMenuItem("启动后自动保持唤醒");
+            autoAwakeItem.Click += delegate
+            {
+                autoAwakeItem.Checked = !autoAwakeItem.Checked;
+                OnAutoAwakeChanged();
+            };
+            autoAwakeItem.Checked = settings.AutoAwake;
             adminItem = new ToolStripMenuItem("以管理员身份重新启动");
             adminItem.Click += delegate { RestartAsAdmin(); };
             adminItem.Visible = !PowerKeeper.IsAdmin();
@@ -78,6 +86,7 @@ namespace Caffeine
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(displayItem);
             menu.Items.Add(autoStartItem);
+            menu.Items.Add(autoAwakeItem);
             menu.Items.Add(adminItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(folderItem);
@@ -87,7 +96,7 @@ namespace Caffeine
             tray.ContextMenuStrip = menu;
             tray.MouseDown += OnTrayMouseDown;
             tray.MouseUp += OnTrayMouseUp;
-            tray.Text = "咖啡因 · 未激活（点击保持唤醒）";
+            RefreshTrayIcon();
 
             esTimer = new System.Windows.Forms.Timer();
             esTimer.Interval = 10000;
@@ -98,6 +107,33 @@ namespace Caffeine
 
             AppLog.Write("托盘已就绪，小图标尺寸=" + AppIcons.SmallIconSize +
                          "px，管理员=" + PowerKeeper.IsAdmin());
+
+            // Must be last: Activate() needs the tray, the menu items and the
+            // 10s pulse timer to all exist already.
+            ApplyAutoAwakeOnStartup();
+        }
+
+        /// <summary>
+        /// "Start already awake".  This is the whole point for a machine that
+        /// serves something to the network (a render box, a small server): after
+        /// a reboot nobody is there to click the tray icon, and the machine
+        /// would simply fall asleep again.
+        ///
+        /// Runs after RecoverPendingRestore(), so the snapshot it takes is the
+        /// restored one -- capturing the "never sleep" values of a crashed
+        /// previous run would make the restore impossible.
+        ///
+        /// Only affects startup: clicking the tray icon afterwards still wins,
+        /// so the user can turn it off for the rest of the session.
+        /// </summary>
+        private void ApplyAutoAwakeOnStartup()
+        {
+            if (!settings.AutoAwake || keepAwake) return;
+            AppLog.Write("已启用「启动后自动保持唤醒」，正在自动进入保活");
+            Activate();
+            if (keepAwake)
+                Balloon("咖啡因已进入保活",
+                    "已根据「启动后自动保持唤醒」自动开启。托盘图标点一下即可随时恢复你原来的设置。");
         }
 
         private void SystemEventsHook()
@@ -235,10 +271,10 @@ namespace Caffeine
             {
                 tray.Icon = AppIcons.Get(keepAwake);
                 tray.Text = keepAwake
-                    ? "咖啡因 · 正在保持唤醒（再点一次恢复默认设置）"
+                    ? "咖啡因 · 保持唤醒中（" + HeldLayers() + "，再点一次恢复）"
                     : "咖啡因 · 未激活（点击保持唤醒）";
                 statusItem.Text = keepAwake
-                    ? "状态：正在保持唤醒"
+                    ? "状态：保持唤醒中 · " + HeldLayers()
                     : "状态：未激活（跟随系统默认设置）";
                 restoreItem.Enabled = keepAwake;
             }
@@ -246,6 +282,20 @@ namespace Caffeine
             {
                 AppLog.Error("刷新托盘图标失败", ex);
             }
+        }
+
+        /// <summary>
+        /// Names the layers that are actually held.  "I can never tell whether
+        /// it is really working" was a real complaint, and a filled cup on its
+        /// own does not say which of the four timeouts are pinned.
+        /// ApplyAwake always writes sleep, hibernation and the disk timeout to
+        /// "never"; the display is the only one that is optional.
+        /// </summary>
+        private string HeldLayers()
+        {
+            return settings.AllowDisplaySleep
+                ? "睡眠/休眠/硬盘已阻止，屏幕可熄"
+                : "睡眠/休眠/硬盘/息屏已阻止";
         }
 
         private void Balloon(string title, string text)
@@ -276,6 +326,8 @@ namespace Caffeine
             {
                 AppLog.Write("允许显示器熄屏 -> " + settings.AllowDisplaySleep);
             }
+            // The status line names the held layers, so it has to follow this.
+            RefreshTrayIcon();
         }
 
         private void OnAutoStartChanged()
@@ -290,6 +342,19 @@ namespace Caffeine
             {
                 autoStartItem.Checked = !autoStartItem.Checked;
                 Balloon("无法修改", "写入开机启动项失败。");
+            }
+        }
+
+        private void OnAutoAwakeChanged()
+        {
+            settings.AutoAwake = autoAwakeItem.Checked;
+            settings.Save();
+            AppLog.Write("启动后自动保持唤醒 -> " + settings.AutoAwake);
+            if (settings.AutoAwake && !UserSettings.IsAutoStartOn())
+            {
+                Balloon("还差一步：开机自启",
+                    "「启动后自动保持唤醒」只在咖啡因自己启动的时候才生效。\n\n" +
+                    "请同时勾选上面的「开机自动启动」，否则每次开机后仍要手动点一次图标。");
             }
         }
 

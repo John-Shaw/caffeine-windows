@@ -13,7 +13,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 # 构建应用 + 安装器 -> dist\Caffeine-Setup-<version>.exe
 powershell -ExecutionPolicy Bypass -File .\build-setup.ps1
 
-# 63 项单元测试（编译真实的 src\ 源码并断言电源设置往返）
+# 88 项单元测试（编译真实的 src\ 源码并断言电源设置往返）
 powershell -ExecutionPolicy Bypass -File .\tests\run-tests.ps1
 ```
 
@@ -93,6 +93,15 @@ python tools\probe_tray.py assets\taskbar_idle.png assets\menu.png
 - 测试必须**相对进入时的机器状态**断言，并在结束时完整还原电源设置。
 - 涉及真实交互的测试脚本要有 preflight：前置状态不对时**直接拒绝运行**并说明原因，
   而不是给出一个误导性的 FAIL。
+- `tests\run-tests.ps1` 的 harness 直接驱动真实的 `TrayContext`，用的是**真实的**
+  `%LOCALAPPDATA%\Caffeine`——和已安装的那份共用同一个 `settings.cfg` 和
+  `pending-restore.cfg`。所以它有两条 preflight：Caffeine 正在运行时拒绝运行
+  （两个进程会抢 `pending-restore.cfg`，所有「文件存在/已删除」断言都会失真）；
+  存在遗留的 `pending-restore.cfg` 时也拒绝（那说明机器还停在「永不睡眠」，
+  测试会把这个状态当成用户默认值快照下来）。要先跑
+  `Caffeine.exe --restore` 清干净。
+- 测试跑完会把 `settings.cfg` 还原成进入测试前的字节。`auto_awake` 是会改变行为的
+  键，被覆盖掉等于静默关掉了服务器的保活，所以这条不能省。
 - 真实安装和 `tests\verify-install.ps1` 共用同一套用户级注册
   （`HKCU\...\Uninstall\Caffeine`、Run 值、开始菜单快捷方式），并排跑会互相覆盖，
   所以脚本会在检测到有真实安装时拒绝运行。
@@ -100,6 +109,7 @@ python tools\probe_tray.py assets\taskbar_idle.png assets\menu.png
 ## 提 PR
 
 1. `version.txt` 是版本的唯一来源——要发版就改它，别去手改程序集属性。
-2. 跑一遍 `tests\run-tests.ps1`，确认 63 项全过。
+2. 跑一遍 `tests\run-tests.ps1`，确认 88 项全过（跑之前先从托盘退出 Caffeine，
+   有遗留保活状态的话先 `Caffeine.exe --restore`）。
 3. 改了图标的话附上 `assets\icon_scale.png` 或真实任务栏截图。
 4. PR 描述里写清楚**为什么**，不只是改了什么。
