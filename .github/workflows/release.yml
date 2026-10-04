@@ -96,17 +96,23 @@ jobs:
             $bare.FullName,
             '.\dist\SHA256SUMS.txt'
           )
-          # Capture gh's output instead of letting it stream: a bare failure
-          # here is unreadable, because GitHub requires a signed-in session to
-          # show step logs even on a public repo.  Echo it into an ::error::
-          # annotation, which IS readable through the public API.
-          $ghOut = & gh @ghArgs 2>&1
+          # Capture gh's output into a FILE, not via 2>&1.  GitHub's PowerShell
+          # wrapper pre-sets $ErrorActionPreference='stop', and redirecting a
+          # native command's stderr with 2>&1 turns each stderr line into an
+          # ErrorRecord, so the very first one kills the script before any
+          # error handling runs - which is why a bare failure here shows up as
+          # nothing but "exit code 1".  `*> file` bypasses that, and it is
+          # verified working on this runner.  The message is echoed as an
+          # ::error:: annotation because GitHub requires a signed-in session to
+          # show step logs even on a public repo, while annotations are public.
+          $ghLog = Join-Path $env:RUNNER_TEMP 'gh.log'
+          & gh @ghArgs *> $ghLog
           $ghExit = $LASTEXITCODE
-          $ghMsg = ($ghOut | ForEach-Object { $_.ToString() }) -join ' | '
+          $ghMsg = ((Get-Content $ghLog -Raw) -replace '\r?\n', ' | ').Trim()
           Write-Host ("gh exit=" + $ghExit + " :: " + $ghMsg)
           if ($ghExit -ne 0) {
-            Write-Host ("::error title=gh release create::exit=" + $ghExit + " :: " + $ghMsg.Replace('%', '%25'))
-            throw ("gh release create failed (exit " + $ghExit + "): " + $ghMsg)
+              Write-Host ("::error title=gh release create::exit=" + $ghExit + " :: " + $ghMsg.Replace('%', '%25'))
+              throw ("gh release create failed (exit " + $ghExit + "): " + $ghMsg)
           }
 
       - name: Show the release

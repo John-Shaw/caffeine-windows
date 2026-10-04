@@ -26,27 +26,33 @@ jobs:
           # TEMPORARY diagnostic; removed once the release step is fixed.
           $ErrorActionPreference = 'Continue'
           $p = @()
+          $T = $env:RUNNER_TEMP
 
-          # (1) no-op write: has_issues is already true on a new repo, so a
-          #     successful PATCH changes nothing but proves contents:write.
-          $log1 = Join-Path $env:RUNNER_TEMP 'p1.log'
-          & gh api --method PATCH "repos/$env:GITHUB_REPOSITORY" -F has_issues=true --jq '.permissions.push' *> $log1
-          $p += ('nopatch_exit=' + $LASTEXITCODE + ' out=' + ((Get-Content $log1 -Raw) -replace '\r?\n', ' '))
+          # (1) Does the token really have contents:write?  Create a throwaway
+          #     branch ref, then delete it.  Unlike PATCH /repos (which needs
+          #     admin), git/refs only needs contents:write, so a 403 here is a
+          #     real answer.  Nothing is left behind either way.
+          $sha = ((& gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha') -join '').Trim()
+          & gh api --method POST "repos/$env:GITHUB_REPOSITORY/git/refs" -f ref='refs/heads/zz-perm-probe' -F sha=$sha *> "$T\r1.log"
+          $p += ('refcreate_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r1.log" -Raw) -replace '\r?\n', ' '))
+          & gh api --method DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/heads/zz-perm-probe" *> "$T\r2.log"
+          $p += ('refdelete_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r2.log" -Raw) -replace '\r?\n', ' '))
 
-          # (2) prove *> file survives a native command writing to stderr, which
-          #     is what 2>&1 cannot do under $ErrorActionPreference='stop'
-          $log2 = Join-Path $env:RUNNER_TEMP 'p2.log'
-          cmd /c "echo boom 1>&2 & exit /b 3" *> $log2
-          $p += ('captexit=' + $LASTEXITCODE + ' said=' + ((Get-Content $log2 -Raw) -replace '\r?\n', ' '))
-
-          # (3) what a genuinely failing gh call looks like through that capture
-          $log3 = Join-Path $env:RUNNER_TEMP 'p3.log'
-          & gh release view v9.9.9-nope *> $log3
-          $p += ('ghfail_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content $log3 -Raw) -replace '\r?\n', ' '))
+          # (2) Can it create a release at all?  Draft only - invisible on the
+          #     public Releases page - and deleted immediately in the same step.
+          & gh release create v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --draft --verify-tag --yes --title probe --notes probe *> "$T\r3.log"
+          $p += ('draftcreate_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r3.log" -Raw) -replace '\r?\n', ' '))
+          $rid = ((& gh release view v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --json databaseId --jq '.databaseId' 2>$null) -join '').Trim()
+          if ($rid) {
+              & gh release delete v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --yes *> "$T\r4.log"
+              $p += ('draftdelete_exit=' + $LASTEXITCODE + ' id=' + $rid)
+          } else {
+              $p += 'draftdelete=skipped'
+          }
 
           $msg = ($p -join ' ||| ')
           Write-Host $msg
-          Write-Host ("::error title=PROBE2::" + $msg.Replace('%', '%25'))
+          Write-Host ("::error title=PROBE3::" + $msg.Replace('%', '%25'))
 
       - name: Check the toolchain
         shell: powershell
