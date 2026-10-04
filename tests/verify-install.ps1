@@ -7,7 +7,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
 
-$root    = 'D:\CodeBase\Caffeine'
+$root    = Split-Path -Parent $PSScriptRoot
 $testDir = Join-Path $env:TEMP 'CaffeineInstallTest'
 $setup11 = Join-Path $root 'dist\Caffeine-Setup-1.1.0.exe'
 $uninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Caffeine'

@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
 
-$root  = 'D:\CodeBase\Caffeine'
+$root  = Split-Path -Parent $PSScriptRoot
 $setup = Join-Path $root 'dist\Caffeine-Setup.exe'
 $out   = Join-Path $root 'assets\setup_step1.png'
 $stage = if ($args.Count -ge 2) { $args[1] } else { '1' }

@@ -5,7 +5,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
 
-$root  = 'D:\CodeBase\Caffeine'
+$root  = Split-Path -Parent $PSScriptRoot
 $exe   = (Resolve-Path (Join-Path $root 'bin\Caffeine.exe')).Path
 $outD  = Join-Path $root 'assets'
 $cafe  = [string][char]0x5496 + [char]0x5561 + [char]0x56E0

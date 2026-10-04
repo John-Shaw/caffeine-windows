@@ -4,7 +4,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
 
-$root  = 'D:\CodeBase\Caffeine'
+$root  = Split-Path -Parent $PSScriptRoot
 $setup = Join-Path $root 'dist\Caffeine-Setup.exe'
 $out   = Join-Path $root 'assets\uninstall.png'
 $dir   = Join-Path $env:TEMP 'CaffeineUninstallShot'
@@ -62,7 +62,7 @@ Start-Sleep -Seconds 3
 Shot $out | Out-Null
 if (ClickByPrefix $uninstall) {
     Start-Sleep -Seconds 2
-    # a "已卸载" message box may be up; dismiss it
+    # an "uninstalled" confirmation box may be up; dismiss it
     $null = ClickByPrefix $ok
     Start-Sleep -Seconds 2
 }

@@ -91,7 +91,8 @@ function Get-AppState {
     return $s
 }
 
-$exe = (Resolve-Path 'D:\CodeBase\Caffeine\bin\Caffeine.exe').Path
+$root = Split-Path -Parent $PSScriptRoot
+$exe = (Resolve-Path (Join-Path $root 'bin\Caffeine.exe')).Path
 # Kill any instance left over from a previous run, but let it put the power
 # settings back first: a bare force-kill while it is keeping the machine awake
 # would leave STANDBYIDLE at 0/0 for whoever runs this next.

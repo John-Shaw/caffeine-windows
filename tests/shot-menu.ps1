@@ -7,7 +7,7 @@
 # one sitting in the "show hidden icons" flyout (which is where a build running
 # from bin\ lands, because Windows pins per exe path).  ASCII-only.
 param(
-    [string]$out = 'D:\CodeBase\Caffeine\assets\menu.png'
+    [string]$out = (Join-Path (Split-Path -Parent $PSScriptRoot) 'assets\menu.png')
 )
 
 $ErrorActionPreference = 'Stop'

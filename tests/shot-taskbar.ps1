@@ -4,7 +4,8 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
 
-$outD = 'D:\CodeBase\Caffeine\assets'
+$root = Split-Path -Parent $PSScriptRoot
+$outD = Join-Path $root 'assets'
 $cafe = [string][char]0x5496 + [char]0x5561 + [char]0x56E0
 
 Add-Type -Namespace W -Name U -MemberDefinition @'
