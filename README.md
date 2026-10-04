@@ -1,6 +1,6 @@
 # 咖啡因 Caffeine for Windows
 
-[![CI](https://github.com/__GH_USER__/caffeine-windows/actions/workflows/ci.yml/badge.svg)](https://github.com/__GH_USER__/caffeine-windows/actions/workflows/ci.yml)
+[![CI](https://github.com/John-Shaw/caffeine-windows/actions/workflows/ci.yml/badge.svg)](https://github.com/John-Shaw/caffeine-windows/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows)
 ![.NET Framework 4.x](https://img.shields.io/badge/.NET-Framework%204.x-512BD4)
@@ -21,8 +21,8 @@ Windows 托盘防休眠小工具。行为照搬 macOS 上的 Caffeine：托盘�
 
 | 方式 | 说明 |
 | --- | --- |
-| **[安装包（推荐）](https://github.com/__GH_USER__/caffeine-windows/releases/latest)** | 页面上的 `Caffeine-Setup-<版本>.exe`，双击即可。按用户安装，**不需要管理员**；重复运行就是覆盖升级，你的设置和开机自启都会保留 |
-| [免安装版](https://github.com/__GH_USER__/caffeine-windows/releases/latest) | 同一页的 `Caffeine.exe`，丢到任意目录双击运行 |
+| **[安装包（推荐）](https://github.com/John-Shaw/caffeine-windows/releases/latest)** | 页面上的 `Caffeine-Setup-<版本>.exe`，双击即可。按用户安装，**不需要管理员**；重复运行就是覆盖升级，你的设置和开机自启都会保留 |
+| [免安装版](https://github.com/John-Shaw/caffeine-windows/releases/latest) | 同一页的 `Caffeine.exe`，丢到任意目录双击运行 |
 | [从源码构建](#自己编译) | 只需要系统自带的 `csc.exe`，不需要装 Visual Studio |
 
 > ⚠️ **安装包没有代码签名**，从浏览器下载时 Windows 可能弹「Windows 已保护你的电脑」。
@@ -60,7 +60,7 @@ Caffeine.exe --restore    手动修复：把上次没还原的设置还原回去
 
 ## 安装
 
-**去 [Releases](https://github.com/__GH_USER__/caffeine-windows/releases/latest) 下载 `Caffeine-Setup-<版本>.exe`，双击即可。**
+**去 [Releases](https://github.com/John-Shaw/caffeine-windows/releases/latest) 下载 `Caffeine-Setup-<版本>.exe`，双击即可。**
 按用户安装到 `%LOCALAPPDATA%\Programs\Caffeine`，不需要管理员，会建开始菜单快捷方式；
 重复运行同一个安装包就是覆盖升级，你的设置和开机自启都保留。
 

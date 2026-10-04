@@ -52,5 +52,5 @@
 - 所有测试都**相对进入时的机器状态**断言，结束时完整还原；`verify-tray.ps1` 和
   `verify-install.ps1` 都有 preflight，发现前置状态不对会直接拒绝运行而不是给出误导性结果。
 
-[Unreleased]: https://github.com/__GH_USER__/caffeine-windows/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/__GH_USER__/caffeine-windows/releases/tag/v1.1.0
+[Unreleased]: https://github.com/John-Shaw/caffeine-windows/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/John-Shaw/caffeine-windows/releases/tag/v1.1.0

@@ -34,8 +34,8 @@ powershell -ExecutionPolicy Bypass -File .\tests\shot-menu.ps1 -out .\assets\men
 
 ## 上线前必须改一处
 
-页面里所有指向 GitHub 的链接都写成了占位符 `__GH_USER__`（`site\index.html` 9 处，
-`README.md` 和 `CHANGELOG.md` 里也有）。
+页面里所有指向 GitHub 的链接都写成了占位符 `__GH_USER__`（`site\index.html` 8 处，
+`README.md` 5 处、`CHANGELOG.md` 2 处）。已经替换成 `John-Shaw`。
 
 替换时**只碰文本文件**——`site\assets\*.png` 是二进制，用
 `Get-Content -Raw | Set-Content` 走一遍会把它们写成乱码：
@@ -69,9 +69,9 @@ https://ofl6y9hdf8wvt.space.mcode.cn
 ```
 
 这是用内置的 `website_deploy` 发布的第一版，drive node id `448588928598514`，
-**发布时 `__GH_USER__` 还没替换**，所以页面上 9 个 GitHub / 下载链接目前都是坏的。
-仓库建好、占位符替换完之后，带同一个 `node_id` 再发布一次就是原地更新，
-网址不变、页面内容整体替换。
+**发布时 `__GH_USER__` 还没替换**，所以页面上 8 个 GitHub / 下载链接当时都是坏的。
+占位符替换完成后带同一个 `node_id` 又发布过一次，网址不变、页面内容整体替换，
+现在链接指向 `https://github.com/John-Shaw/caffeine-windows`。
 
 **GitHub Pages（免费，最省事）**
 仓库 Settings → Pages → Source 选 `Deploy from a branch`，
