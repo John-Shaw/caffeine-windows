@@ -14,45 +14,9 @@ jobs:
   verify:
     runs-on: windows-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-
-      - name: Probe write permission and native-stderr capture
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # TEMPORARY diagnostic; removed once the release step is fixed.
-          $ErrorActionPreference = 'Continue'
-          $p = @()
-          $T = $env:RUNNER_TEMP
-
-          # (1) Does the token really have contents:write?  Create a throwaway
-          #     branch ref, then delete it.  Unlike PATCH /repos (which needs
-          #     admin), git/refs only needs contents:write, so a 403 here is a
-          #     real answer.  Nothing is left behind either way.
-          $sha = ((& gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha') -join '').Trim()
-          & gh api --method POST "repos/$env:GITHUB_REPOSITORY/git/refs" -f ref='refs/heads/zz-perm-probe' -F sha=$sha *> "$T\r1.log"
-          $p += ('refcreate_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r1.log" -Raw) -replace '\r?\n', ' '))
-          & gh api --method DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/heads/zz-perm-probe" *> "$T\r2.log"
-          $p += ('refdelete_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r2.log" -Raw) -replace '\r?\n', ' '))
-
-          # (2) Can it create a release at all?  Draft only - invisible on the
-          #     public Releases page - and deleted immediately in the same step.
-          & gh release create v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --draft --verify-tag --title probe --notes probe *> "$T\r3.log"
-          $p += ('draftcreate_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r3.log" -Raw) -replace '\r?\n', ' '))
-          $rid = ((& gh release view v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --json databaseId --jq '.databaseId' 2>$null) -join '').Trim()
-          if ($rid) {
-              & gh release delete v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --yes *> "$T\r4.log"
-              $p += ('draftdelete_exit=' + $LASTEXITCODE + ' id=' + $rid)
-          } else {
-              $p += 'draftdelete=skipped'
-          }
-
-          $msg = ($p -join ' ||| ')
-          Write-Host $msg
-          Write-Host ("::error title=PROBE3::" + $msg.Replace('%', '%25'))
 
       - name: Check the toolchain
         shell: powershell
