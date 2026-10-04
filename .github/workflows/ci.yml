@@ -13,8 +13,32 @@ permissions:
 jobs:
   verify:
     runs-on: windows-latest
+    # TEMPORARY (diagnostic for the failing release step): raised to `write` so
+    # the gh probe below reports the same token powers release.yml gets.
+    # Drop back to `contents: read` once the release step is fixed.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Probe the gh release toolchain
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # TEMPORARY diagnostic.  Reports through ::error:: so it shows up as
+          # an annotation (readable without signing in) without turning CI red.
+          $ErrorActionPreference = 'Continue'
+          $ver   = (& gh --version 2>&1 | Select-Object -First 1) -join ''
+          $login = (& gh api user --jq '.login' 2>&1) -join ' '
+          $perms = (& gh api "repos/$env:GITHUB_REPOSITORY" --jq '.permissions' 2>&1) -join ' '
+          $repo  = (& gh repo view --json nameWithOwner 2>&1) -join ' '
+          # real command shape, but against a tag that cannot exist -> exercises
+          # auth + repo resolution + write scope without creating anything
+          $dry   = (& gh release create v0.0.0-probe-does-not-exist --verify-tag --title p --notes p 2>&1) -join ' | '
+          $msg = "PROBE gh=[$ver] login=[$login] perms=[$perms] repo=[$repo] dryrun=[$dry]"
+          Write-Host $msg
+          Write-Host ("::error title=PROBE::" + $msg.Replace('%', '%25'))
 
       - name: Check the toolchain
         shell: powershell
