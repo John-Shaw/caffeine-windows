@@ -5,7 +5,14 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = Split-Path -Parent $root
 $csc  = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-$exe  = Join-Path $root 'bin\Caffeine.Tests.exe'
+$bin  = Join-Path $root 'bin'
+$exe  = Join-Path $bin 'Caffeine.Tests.exe'
+
+# csc does not create the output directory - it fails with CS1567 if bin\ is
+# missing.  Do not rely on build.ps1 having run first: CONTRIBUTING tells
+# contributors to run this script on a fresh clone, and CI used to hide the
+# dependency by building before testing.
+New-Item -ItemType Directory -Force -Path $bin | Out-Null
 
 # Program.cs asks for AppVersion, which the build generates from version.txt
 & (Join-Path $root 'gen-version.ps1') -Root $root
