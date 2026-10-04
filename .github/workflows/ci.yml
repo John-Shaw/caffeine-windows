@@ -18,50 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Breadcrumb the release step under ErrorActionPreference=stop
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v0.0.0-crumb-probe
-        run: |
-          # TEMPORARY diagnostic.  Deliberately does NOT touch
-          # $ErrorActionPreference, so it stays 'stop' exactly like the real
-          # release step.  Write-Host is not an error, so every breadcrumb
-          # before the point of death still reaches the annotations API - and
-          # annotations are public, while step logs are not.
-          function Crumb($s) { Write-Host ("::warning title=CRUMB::" + $s) }
-          Crumb 'step-entered'
-          $setup = (Get-ChildItem .\dist\Caffeine-Setup-*.exe | Select-Object -First 1)
-          Crumb ('setup=' + $setup.Name)
-          $bare = (Get-ChildItem .\dist\Caffeine.exe | Select-Object -First 1)
-          Crumb ('bare=' + $bare.Name)
-          $ver = ($env:TAG -replace '^v', '')
-          $notes = @(
-            "install: Caffeine-Setup-$ver.exe",
-            'plain-ASCII-line',
-            'signed-warning-line',
-            'sha256 line'
-          ) -join [Environment]::NewLine
-          Crumb ('notes-built len=' + $notes.Length)
-          $notesFile = Join-Path $env:RUNNER_TEMP 'notes-probe.md'
-          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-          [System.IO.File]::WriteAllText($notesFile, $notes, $utf8NoBom)
-          Crumb ('notes-written bytes=' + (Get-Item $notesFile).Length)
-          $ghArgs = @(
-            'release', 'create', $env:TAG,
-            '--repo', $env:GITHUB_REPOSITORY,
-            '--verify-tag',
-            '--title', ('Caffeine ' + $env:TAG),
-            '--notes-file', $notesFile,
-            $setup.FullName,
-            $bare.FullName
-          )
-          Crumb 'args-built'
-          $ghLog = Join-Path $env:RUNNER_TEMP 'gh.log'
-          & gh @ghArgs *> $ghLog
-          Crumb ('gh-exit=' + $LASTEXITCODE + ' log=' + ((Get-Content $ghLog -Raw) -replace '\r?\n', ' '))
-          Crumb 'reached-the-end'
-
       - name: Check the toolchain
         shell: powershell
         run: |
@@ -137,3 +93,54 @@ jobs:
             dist/Caffeine.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Breadcrumb the release step (runs AFTER the build, like release.yml)
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v0.0.0-crumb-probe
+        run: |
+          # TEMPORARY diagnostic.  Deliberately does NOT touch
+          # $ErrorActionPreference, so it stays 'stop' exactly like the real
+          # release step.  Write-Host is not an error, so every breadcrumb
+          # before the point of death still reaches the annotations API - and
+          # annotations are public, while step logs are not.
+          function Crumb($s) { Write-Host ("::warning title=CRUMB::" + $s) }
+          Crumb 'step-entered'
+          $setup = (Get-ChildItem .\dist\Caffeine-Setup-*.exe | Select-Object -First 1)
+          Crumb ('setup=' + $setup.Name)
+          $bare = (Get-ChildItem .\dist\Caffeine.exe | Select-Object -First 1)
+          Crumb ('bare=' + $bare.Name)
+          $ver = ($env:TAG -replace '^v', '')
+          Crumb ('ver=' + $ver)
+          $notes = @(
+            "安装（推荐）：下载 Caffeine-Setup-$ver.exe，双击即可，按用户安装、不需要管理员。",
+            '',
+            '免安装：下载 Caffeine.exe 丢到任意目录双击运行。',
+            '',
+            '安装包未做代码签名。双击时若弹出「Windows 已保护你的电脑」，点「更多信息」再点「仍要运行」即可。',
+            '',
+            '校验：SHA256SUMS.txt 里有上面两个文件的 SHA256。',
+            '',
+            '变更内容见仓库里的 CHANGELOG.md。'
+          ) -join [Environment]::NewLine
+          Crumb ('notes-built len=' + $notes.Length)
+          $notesFile = Join-Path $env:RUNNER_TEMP 'notes-probe.md'
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText($notesFile, $notes, $utf8NoBom)
+          Crumb ('notes-written bytes=' + (Get-Item $notesFile).Length)
+          $ghArgs = @(
+            'release', 'create', $env:TAG,
+            '--repo', $env:GITHUB_REPOSITORY,
+            '--verify-tag',
+            '--title', ('Caffeine ' + $env:TAG),
+            '--notes-file', $notesFile,
+            $setup.FullName,
+            $bare.FullName,
+            '.\dist\SHA256SUMS.txt'
+          )
+          Crumb 'args-built'
+          $ghLog = Join-Path $env:RUNNER_TEMP 'gh.log'
+          & gh @ghArgs *> $ghLog
+          Crumb ('gh-exit=' + $LASTEXITCODE + ' log=' + ((Get-Content $ghLog -Raw) -replace '\r?\n', ' '))
+          Crumb 'reached-the-end'
