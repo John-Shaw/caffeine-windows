@@ -87,14 +87,27 @@ jobs:
 
           $ghArgs = @(
             'release', 'create', $env:TAG,
+            '--repo', $env:GITHUB_REPOSITORY,
             '--verify-tag',
+            '--yes',
             '--title', ('Caffeine ' + $env:TAG),
             '--notes-file', $notesFile,
             $setup.FullName,
             $bare.FullName,
             '.\dist\SHA256SUMS.txt'
           )
-          gh @ghArgs
+          # Capture gh's output instead of letting it stream: a bare failure
+          # here is unreadable, because GitHub requires a signed-in session to
+          # show step logs even on a public repo.  Echo it into an ::error::
+          # annotation, which IS readable through the public API.
+          $ghOut = & gh @ghArgs 2>&1
+          $ghExit = $LASTEXITCODE
+          $ghMsg = ($ghOut | ForEach-Object { $_.ToString() }) -join ' | '
+          Write-Host ("gh exit=" + $ghExit + " :: " + $ghMsg)
+          if ($ghExit -ne 0) {
+            Write-Host ("::error title=gh release create::exit=" + $ghExit + " :: " + $ghMsg.Replace('%', '%25'))
+            throw ("gh release create failed (exit " + $ghExit + "): " + $ghMsg)
+          }
 
       - name: Show the release
         shell: powershell
