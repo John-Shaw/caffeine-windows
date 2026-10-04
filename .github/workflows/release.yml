@@ -64,20 +64,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
+          # THIS run: BLOCK MUST STAY PURE ASCII.  GitHub writes it to a temp
+          # .ps1 with NO BOM, and Windows PowerShell 5.1 on the (en-US) runner
+          # then reads it with the ANSI code page.  Non-ASCII bytes decode into
+          # something that kills the tokenizer, so the whole script fails to
+          # parse and produces no output at all - just "exit code 1".
+          # Measured: identical script, ASCII notes -> ran; Chinese notes ->
+          # 0s, zero output, not one statement executed.
+          # The Chinese release notes therefore live in docs\release-notes.md,
+          # read here as UTF-8 bytes.  See CONTRIBUTING rule 1.
           $setup = (Get-ChildItem .\dist\Caffeine-Setup-*.exe | Select-Object -First 1)
           $bare  = (Get-ChildItem .\dist\Caffeine.exe | Select-Object -First 1)
           $ver   = ($env:TAG -replace '^v', '')
-          $notes = @(
-            "安装（推荐）：下载 Caffeine-Setup-$ver.exe，双击即可，按用户安装、不需要管理员。",
-            '',
-            '免安装：下载 Caffeine.exe 丢到任意目录双击运行。',
-            '',
-            '安装包未做代码签名。双击时若弹出「Windows 已保护你的电脑」，点「更多信息」再点「仍要运行」即可。',
-            '',
-            '校验：SHA256SUMS.txt 里有上面两个文件的 SHA256。',
-            '',
-            '变更内容见仓库里的 CHANGELOG.md。'
-          ) -join [Environment]::NewLine
+          $tpl   = Join-Path $env:GITHUB_WORKSPACE 'docs\release-notes.md'
+          $notes = [System.IO.File]::ReadAllText($tpl, [System.Text.Encoding]::UTF8)
+          $notes = $notes.Replace('{{VERSION}}', $ver)
           # Set-Content -Encoding UTF8 would prepend a BOM under PowerShell 5.1,
           # and gh passes that file through verbatim, so the release notes would
           # start with a stray U+FEFF.  Write UTF-8 without one.
