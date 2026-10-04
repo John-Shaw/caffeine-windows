@@ -34,22 +34,56 @@ powershell -ExecutionPolicy Bypass -File .\tests\shot-menu.ps1 -out .\assets\men
 
 ## 上线前必须改一处
 
-页面里所有指向 GitHub 的链接都写成了占位符 `__GH_USER__`：
+页面里所有指向 GitHub 的链接都写成了占位符 `__GH_USER__`（`site\index.html` 9 处，
+`README.md` 和 `CHANGELOG.md` 里也有）。
+
+替换时**只碰文本文件**——`site\assets\*.png` 是二进制，用
+`Get-Content -Raw | Set-Content` 走一遍会把它们写成乱码：
 
 ```powershell
-Get-ChildItem .\site -Recurse -File | ForEach-Object {
-    (Get-Content $_.FullName -Raw).Replace('__GH_USER__', '你的GitHub用户名') |
-        Set-Content $_.FullName -NoNewline -Encoding UTF8
+$u = '你的GitHub用户名'
+'.\site\index.html', '.\README.md', '.\CHANGELOG.md' | ForEach-Object {
+    (Get-Content $_ -Raw -Encoding UTF8).Replace('__GH_USER__', $u) |
+        Set-Content $_ -NoNewline -Encoding UTF8
 }
 ```
 
-`CHANGELOG.md` 和 `README.md` 里也有同样的占位符。
+替换完确认没有漏网的：
+
+```powershell
+Get-ChildItem . -Recurse -File -Include *.md,*.html,*.yml |
+    Select-String '__GH_USER__'
+```
+
+> PowerShell 5.1 的 `Set-Content -Encoding UTF8` 会写 BOM。`index.html` 里有 `<meta charset="utf-8">`，
+> 多一个 BOM 浏览器也能正常解析，实测无影响；介意的话改用 `-Encoding UTF8NoBOM`（PS 7+）。
+
+改完 CSS 后记得把 `index.html` 里的 `styles.css?v=N` 加一，静态托管普遍给 CSS 加长缓存。
 
 ## 部署
+
+**当前线上地址**
+
+```
+https://ofl6y9hdf8wvt.space.mcode.cn
+```
+
+这是用内置的 `website_deploy` 发布的第一版，drive node id `448588928598514`，
+**发布时 `__GH_USER__` 还没替换**，所以页面上 9 个 GitHub / 下载链接目前都是坏的。
+仓库建好、占位符替换完之后，带同一个 `node_id` 再发布一次就是原地更新，
+网址不变、页面内容整体替换。
 
 **GitHub Pages（免费，最省事）**
 仓库 Settings → Pages → Source 选 `Deploy from a branch`，
 分支 `main`、目录选 `/site`。几分钟后就上线。
+好处是下载链接和源码链接与仓库同源，之后不用再改链接。
 
 **任何静态托管**
 `site\` 整个目录传上去即可，它就是一个普通的静态站，没有服务端依赖。
+
+## 本地预览
+
+```powershell
+python -m http.server 8765 --directory site
+```
+
