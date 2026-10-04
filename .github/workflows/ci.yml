@@ -40,7 +40,7 @@ jobs:
 
           # (2) Can it create a release at all?  Draft only - invisible on the
           #     public Releases page - and deleted immediately in the same step.
-          & gh release create v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --draft --verify-tag --yes --title probe --notes probe *> "$T\r3.log"
+          & gh release create v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --draft --verify-tag --title probe --notes probe *> "$T\r3.log"
           $p += ('draftcreate_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content "$T\r3.log" -Raw) -replace '\r?\n', ' '))
           $rid = ((& gh release view v0.0.0-perm-probe --repo $env:GITHUB_REPOSITORY --json databaseId --jq '.databaseId' 2>$null) -join '').Trim()
           if ($rid) {

@@ -85,11 +85,14 @@ jobs:
           $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
           [System.IO.File]::WriteAllText($notesFile, $notes, $utf8NoBom)
 
+          # NOTE: `gh release create` has NO --yes flag (only `gh release
+          # delete` does).  Adding it makes gh abort with "unknown flag" before
+          # it contacts the API at all.  Verified on the runner against the
+          # command's own usage output.
           $ghArgs = @(
             'release', 'create', $env:TAG,
             '--repo', $env:GITHUB_REPOSITORY,
             '--verify-tag',
-            '--yes',
             '--title', ('Caffeine ' + $env:TAG),
             '--notes-file', $notesFile,
             $setup.FullName,
