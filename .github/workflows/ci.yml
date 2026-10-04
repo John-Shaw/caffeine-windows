@@ -49,8 +49,18 @@ jobs:
           if (-not $setup) { throw 'installer was not produced' }
           Write-Host ("installer: " + $setup.Name + "  " + $setup.Length + " bytes")
 
-          & $setup.FullName '--silent' '--no-launch'
-          if ($LASTEXITCODE -ne 0) { throw "silent install exited $LASTEXITCODE" }
+          # Must be Start-Process -Wait, NOT `& $setup ... ; $LASTEXITCODE`.
+          # The installer is compiled /target:winexe, and PowerShell does not
+          # wait for GUI programs and does not update $LASTEXITCODE for them -
+          # it just keeps whatever the previous native command left behind
+          # ($null in a fresh session, so `-ne 0` is true and the step dies).
+          # It also means a Test-Path straight after `&` races the extraction.
+          # Measured: `&` on a 3s WinExe returns in 27ms with the stale code.
+          # --no-launch must stay: -Wait blocks on the whole process tree, so
+          # letting it launch Caffeine.exe here would hang the step forever.
+          $installArgs = @('--silent', '--no-launch')
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList $installArgs -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "silent install exited $($p.ExitCode)" }
 
           $dir = Join-Path $env:LOCALAPPDATA 'Programs\Caffeine'
           $exe = Join-Path $dir 'Caffeine.exe'

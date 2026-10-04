@@ -35,6 +35,14 @@ powershell -ExecutionPolicy Bypass -File .\tests\run-tests.ps1
 5. **`Start-Process -Wait` 会等整个进程树**（包括安装器启动的 `Caffeine.exe`），会永久阻塞。
 6. **`Stop-Process` / `taskkill` 可能杀不掉 Caffeine**，用
    `Invoke-CimMethod -InputObject $_ -MethodName Terminate`。
+7. **调安装器（WinExe）必须用 `Start-Process -Wait -PassThru` 读 `$p.ExitCode`，
+   不能用 `& $setup ...` + `$LASTEXITCODE`。** PowerShell 对 GUI 程序
+   **不等待、也不更新 `$LASTEXITCODE`**，它只会留着上一条原生命令的值。
+   实测一个睡 3 秒的 WinExe：`&` 27 ms 就返回，`$LASTEXITCODE` 是上条命令的残留值
+   （全新会话里是 `$null`，于是 `-ne 0` 成立，CI 直接挂）。
+   同样的原因，`&` 之后紧跟 `Test-Path` 会和文件解压赛跑。
+   这只对 `/target:exe` 的控制台程序成立——`tests\run-tests.ps1` 里的测试
+   harness 是控制台程序，用 `&` 是对的，别顺手改。
 
 ## 改图标
 
