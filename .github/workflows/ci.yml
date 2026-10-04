@@ -14,9 +14,39 @@ jobs:
   verify:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Probe write permission and native-stderr capture
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # TEMPORARY diagnostic; removed once the release step is fixed.
+          $ErrorActionPreference = 'Continue'
+          $p = @()
+
+          # (1) no-op write: has_issues is already true on a new repo, so a
+          #     successful PATCH changes nothing but proves contents:write.
+          $log1 = Join-Path $env:RUNNER_TEMP 'p1.log'
+          & gh api --method PATCH "repos/$env:GITHUB_REPOSITORY" -F has_issues=true --jq '.permissions.push' *> $log1
+          $p += ('nopatch_exit=' + $LASTEXITCODE + ' out=' + ((Get-Content $log1 -Raw) -replace '\r?\n', ' '))
+
+          # (2) prove *> file survives a native command writing to stderr, which
+          #     is what 2>&1 cannot do under $ErrorActionPreference='stop'
+          $log2 = Join-Path $env:RUNNER_TEMP 'p2.log'
+          cmd /c "echo boom 1>&2 & exit /b 3" *> $log2
+          $p += ('captexit=' + $LASTEXITCODE + ' said=' + ((Get-Content $log2 -Raw) -replace '\r?\n', ' '))
+
+          # (3) what a genuinely failing gh call looks like through that capture
+          $log3 = Join-Path $env:RUNNER_TEMP 'p3.log'
+          & gh release view v9.9.9-nope *> $log3
+          $p += ('ghfail_exit=' + $LASTEXITCODE + ' said=' + ((Get-Content $log3 -Raw) -replace '\r?\n', ' '))
+
+          $msg = ($p -join ' ||| ')
+          Write-Host $msg
+          Write-Host ("::error title=PROBE2::" + $msg.Replace('%', '%25'))
 
       - name: Check the toolchain
         shell: powershell
