@@ -14,9 +14,53 @@ jobs:
   verify:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Breadcrumb the release step under ErrorActionPreference=stop
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v0.0.0-crumb-probe
+        run: |
+          # TEMPORARY diagnostic.  Deliberately does NOT touch
+          # $ErrorActionPreference, so it stays 'stop' exactly like the real
+          # release step.  Write-Host is not an error, so every breadcrumb
+          # before the point of death still reaches the annotations API - and
+          # annotations are public, while step logs are not.
+          function Crumb($s) { Write-Host ("::warning title=CRUMB::" + $s) }
+          Crumb 'step-entered'
+          $setup = (Get-ChildItem .\dist\Caffeine-Setup-*.exe | Select-Object -First 1)
+          Crumb ('setup=' + $setup.Name)
+          $bare = (Get-ChildItem .\dist\Caffeine.exe | Select-Object -First 1)
+          Crumb ('bare=' + $bare.Name)
+          $ver = ($env:TAG -replace '^v', '')
+          $notes = @(
+            "install: Caffeine-Setup-$ver.exe",
+            'plain-ASCII-line',
+            'signed-warning-line',
+            'sha256 line'
+          ) -join [Environment]::NewLine
+          Crumb ('notes-built len=' + $notes.Length)
+          $notesFile = Join-Path $env:RUNNER_TEMP 'notes-probe.md'
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText($notesFile, $notes, $utf8NoBom)
+          Crumb ('notes-written bytes=' + (Get-Item $notesFile).Length)
+          $ghArgs = @(
+            'release', 'create', $env:TAG,
+            '--repo', $env:GITHUB_REPOSITORY,
+            '--verify-tag',
+            '--title', ('Caffeine ' + $env:TAG),
+            '--notes-file', $notesFile,
+            $setup.FullName,
+            $bare.FullName
+          )
+          Crumb 'args-built'
+          $ghLog = Join-Path $env:RUNNER_TEMP 'gh.log'
+          & gh @ghArgs *> $ghLog
+          Crumb ('gh-exit=' + $LASTEXITCODE + ' log=' + ((Get-Content $ghLog -Raw) -replace '\r?\n', ' '))
+          Crumb 'reached-the-end'
 
       - name: Check the toolchain
         shell: powershell
